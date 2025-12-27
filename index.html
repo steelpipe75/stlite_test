@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <title>stlile_sample</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@stlite/browser@0.95.0/build/stlite.css"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module">
+import { mount } from "https://cdn.jsdelivr.net/npm/@stlite/browser@0.95.0/build/stlite.js"
+mount(
+  {
+    
+    streamlitConfig : {'client.toolbarMode': 'viewer'},
+    requirements: ['streamlit', 'pandas', 'numpy', 'pydeck'],
+    entrypoint: "stlite_sample.py",
+    
+    pyodideUrl: "https://cdn.jsdelivr.net/pyodide/v0.29.0/full/pyodide.js",
+    files: {
+"stlite_sample.py": `
+import streamlit as st
+import pandas as pd
+import numpy as np
+import pydeck as pdk
+
+# ページの設定
+st.set_page_config(page_title="stlite 3D Map & Table", page_icon="📊", layout="wide")
+
+st.title("📊 stlite データ可視化デモ")
+st.write("3D地図でのプロットと、詳細データのテーブル表示を切り替え・併用できます。")
+
+# 1. データの準備
+@st.cache_data
+def get_data(num_points):
+    base_lat, base_lon = 35.6812, 139.7671
+    df = pd.DataFrame({
+        '地点名': [f"Point {i}" for i in range(num_points)],
+        'lat': base_lat + np.random.randn(num_points) * 0.01,
+        'lon': base_lon + np.random.randn(num_points) * 0.01,
+        '数値データ': np.random.randint(100, 1000, num_points)
+    })
+    return df
+
+# サイドバーの設定
+st.sidebar.header("設定")
+num_points = st.sidebar.slider("データ数", 50, 1000, 300)
+data = get_data(num_points)
+
+# 2. メインレイアウト（タブで表示を切り替え）
+tab1, tab2 = st.tabs(["🏙️ 3D地図表示", "📑 データテーブル"])
+
+with tab1:
+    st.subheader("3D Column Map")
+    
+    view_state = pdk.ViewState(
+        latitude=35.6812,
+        longitude=139.7671,
+        zoom=13,
+        pitch=50,
+    )
+
+    layer = pdk.Layer(
+        "ColumnLayer",
+        data=data,
+        get_position="[lon, lat]",
+        get_elevation="数値データ",
+        elevation_scale=0.5,
+        radius=25,
+        get_fill_color="[数値データ * 0.2, 120, 200, 160]",
+        pickable=True,
+        auto_highlight=True,
+    )
+
+    st.pydeck_chart(pdk.Deck(
+        layers=[layer],
+        initial_view_state=view_state,
+        tooltip={"text": "{地点名}\\\\n数値: {数値データ}"}
+    ))
+
+with tab2:
+    st.subheader("Raw Data Table")
+    st.write("表のヘッダーをクリックするとソートが可能です。")
+
+    # st.dataframe で表を表示
+    # use_container_width=True で画面幅いっぱいに広げる
+    st.dataframe(
+        data,
+        column_order=("地点名", "数値データ", "lat", "lon")
+    )
+
+# 3. 統計情報の表示（おまけ）
+st.sidebar.markdown("---")
+st.sidebar.subheader("統計")
+st.sidebar.metric("データの合計", f"{data['数値データ'].sum():,}")
+st.sidebar.metric("最大値", f"{data['数値データ'].max()}")
+
+`,
+
+},
+  },
+  document.getElementById("root")
+)
+
+function Ou(n){const i=window.atob(n),a=i.length,l=new Uint8Array(a);for(let u=0;u<a;u++)l[u]=i.charCodeAt(u);return l}
+    </script>
+  </body>
+  <!-- We love stlite! https://github.com/whitphx/stlite and Pyodide https://github.com/pyodide/pyodide -->
+</html>
